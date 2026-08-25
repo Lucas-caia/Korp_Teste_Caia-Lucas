@@ -1,41 +1,34 @@
 # Nexa Fiscal
 
-Nexa Fiscal é uma aplicação web para cadastro de produtos, controle de estoque e emissão simplificada de notas fiscais.
+Nexa Fiscal é uma aplicação web para cadastro de produtos, controle de estoque e emissão simplificada de notas fiscais, construída com **Angular** no frontend e **microsserviços em C# / ASP.NET Core** no backend.
 
-Este repositório foi iniciado para o desafio técnico e está organizado desde o primeiro commit para evoluir com **Angular no frontend** e **microsserviços em C# / ASP.NET Core no backend**.
+## Frontend
 
-### Frontend
+A aplicação inclui:
 
-O frontend já é navegável e funcional utilizando dados locais em memória. Ele inclui:
+- login e registro com autenticação JWT;
+- dashboard com indicadores;
+- cadastro e consulta de produtos com controle de saldo;
+- criação de notas fiscais com numeração sequencial, múltiplos produtos e quantidades;
+- fechamento de notas com atualização real do estoque;
+- feedback para estoque insuficiente e indisponibilidade do serviço de estoque;
+- impressão da nota após o fechamento.
 
-- Dashboard com indicadores;
-- Cadastro e consulta de produtos;
-- Busca e estados de estoque;
-- Listagem e filtros de notas fiscais;
-- Criação de nota com múltiplos produtos;
-- Fechamento da nota e atualização simulada de estoque;
-- Tratamento visual de estoque insuficiente;
-- Detalhes e impressão da nota;
-- Nexa Insights com análise local demonstrativa;
-- Layout responsivo;
-- Login e registro integrados ao serviço de autenticação.
+## Backend
 
-### Backend
+O backend é dividido em três serviços independentes:
 
-Os dois microsserviços obrigatórios continuam separados:
+- `auth-service`: usuários, login e emissão de JWT;
+- `inventory-service`: produtos, saldos e baixa de estoque;
+- `billing-service`: notas fiscais, itens, numeração e fechamento.
 
-- `inventory-service`: produtos e estoque;
-- `billing-service`: notas fiscais e faturamento.
+Cada serviço possui persistência própria em MongoDB. O Billing Service se comunica com o Inventory Service durante o fechamento da nota.
 
-Além deles, a autenticação foi isolada em um serviço de suporte:
-
-- `auth-service`: registro de usuários, login e emissão de JWT.
-
-Cada serviço possui seus próprios limites de responsabilidade. Inventory e Billing já estão preparados para validar os tokens emitidos pelo Auth Service.
+Mais detalhes em [`backend/README.md`](backend/README.md) e [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Executando com Docker
 
-Com Docker e Docker Compose instalados, toda a estrutura pode ser iniciada a partir da raiz do repositório:
+Requisito: Docker com Docker Compose.
 
 ```bash
 docker compose up --build
@@ -43,53 +36,32 @@ docker compose up --build
 
 Serviços disponíveis:
 
-- Frontend: `http://localhost:4200`
-- Auth API: `http://localhost:5103`
-- Inventory API: `http://localhost:5101`
-- Billing API: `http://localhost:5102`
-- Auth MongoDB: `localhost:27017`
-- Inventory MongoDB: `localhost:27018`
-- Billing MongoDB: `localhost:27019`
+| Serviço | Endereço |
+| --- | --- |
+| Frontend | `http://localhost:4200` |
+| Inventory API | `http://localhost:5101` |
+| Billing API | `http://localhost:5102` |
+| Auth API | `http://localhost:5103` |
 
-Para encerrar os containers:
+Para encerrar:
 
 ```bash
 docker compose down
 ```
 
-Os bancos utilizam volumes separados, mantendo a propriedade dos dados de cada microsserviço.
+Os bancos utilizam volumes separados. A variável `JWT_SECRET` pode ser configurada através de um arquivo `.env` baseado em `.env.example`.
 
-O Compose possui uma chave JWT apenas para desenvolvimento local. Para fornecer uma chave própria, copie `.env.example` para `.env` e altere `JWT_SECRET`.
+## Stack
 
-## Executando o frontend
-
-Requisitos sugeridos:
-
-- Node.js 20+
-- npm 10+
-
-```bash
-cd frontend/nexa-fiscal-web
-npm install
-npm start
-```
-
-Depois acesse `http://localhost:4200`.
-
-Para utilizar login e registro executando apenas o Angular localmente, o Auth Service também deve estar disponível em `http://localhost:5103`.
-
-## Stack planejada
-
-- Angular + TypeScript + RxJS
-- C# + ASP.NET Core Web API
-- JWT Bearer Authentication
+- Angular 20 + TypeScript + RxJS
+- C# + .NET 8 + ASP.NET Core Web API
 - MongoDB
-- OpenAPI / Swagger
+- JWT Bearer Authentication
 - Docker / Docker Compose
-- xUnit
-- Serilog
-- Resiliência HTTP entre os microsserviços
 
 ## Documentação
 
-O BRD inicial está disponível em [`docs/BRD.md`](docs/BRD.md).
+- [Business Requirements Document](docs/BRD.md)
+- [Arquitetura da solução](docs/ARCHITECTURE.md)
+- [Backend](backend/README.md)
+- [Detalhamento técnico](docs/TECHNICAL_DETAILS.md)
