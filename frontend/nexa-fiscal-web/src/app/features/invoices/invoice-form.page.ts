@@ -1,122 +1,121 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { InvoiceItem, InsufficientStockItem } from '../../core/models/invoice.model';
-import { Product } from '../../core/models/product.model';
-import { InventoryService, InsufficientStockError } from '../../core/services/inventory.service';
+import { Observable } from 'rxjs';
+import { CatalogProduct } from '../../core/models/catalog-product.model';
+import { ProductService } from '../../core/services/product.service';
 import { BillingService } from '../../core/services/billing.service';
-import { switchMap } from 'rxjs';
+
+interface DraftInvoiceItem {
+  productId: string;
+  code: string;
+  description: string;
+  quantity: number;
+  balance: number;
+}
 
 @Component({
   selector: 'app-invoice-form-page',
   standalone: true,
-  imports: [AsyncPipe, FormsModule, RouterLink],
+  imports: [AsyncPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './invoice-form.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class InvoiceFormPage {
-  readonly products$ = this.inventory.products$;
-  items: InvoiceItem[] = [];
-  selectedProductId = '';
-  quantity = 1;
+export class InvoiceFormPage implements OnInit {
+  readonly products$: Observable<CatalogProduct[]> = this.products.products$;
+  readonly productControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required]
+  });
+  readonly quantityControl = new FormControl(1, {
+    nonNullable: true,
+    validators: [Validators.required, Validators.min(1)]
+  });
+
+  items: DraftInvoiceItem[] = [];
   processing = false;
   message = '';
-  insufficientItems: InsufficientStockItem[] = [];
+  itemMessage = '';
 
   constructor(
-    private readonly inventory: InventoryService,
+    private readonly products: ProductService,
     private readonly billing: BillingService,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
-  selectedProduct(): Product | undefined {
-    return this.inventory.snapshot().find(product => product.id === this.selectedProductId);
+  ngOnInit(): void {
+    this.products.load();
+  }
+
+  selectedProduct(): CatalogProduct | undefined {
+    return this.products.snapshot().find(product => product.id === this.productControl.value);
   }
 
   addItem(): void {
-    this.message = '';
+    this.itemMessage = '';
+
+    if (this.productControl.invalid || this.quantityControl.invalid) {
+      this.productControl.markAsTouched();
+      this.quantityControl.markAsTouched();
+      return;
+    }
+
     const product = this.selectedProduct();
     if (!product) {
-      this.message = 'Selecione um produto.';
-      return;
-    }
-    if (!Number.isInteger(this.quantity) || this.quantity <= 0) {
-      this.message = 'Informe uma quantidade inteira maior que zero.';
+      this.itemMessage = 'Selecione um produto válido.';
       return;
     }
 
-    const existing = this.items.find(item => item.productId === product.id);
-    if (existing) {
-      existing.quantity += this.quantity;
-      this.items = [...this.items];
-    } else {
-      this.items = [...this.items, {
+    if (this.items.some(item => item.productId === product.id)) {
+      this.itemMessage = 'Este produto já foi adicionado à nota.';
+      return;
+    }
+
+    this.items = [
+      ...this.items,
+      {
         productId: product.id,
-        productCode: product.code,
-        productDescription: product.description,
-        quantity: this.quantity,
-        balanceAtAddition: product.balance
-      }];
-    }
+        code: product.code,
+        description: product.description,
+        quantity: this.quantityControl.value,
+        balance: product.balance
+      }
+    ];
 
-    this.selectedProductId = '';
-    this.quantity = 1;
+    this.productControl.setValue('');
+    this.quantityControl.setValue(1);
   }
 
   removeItem(productId: string): void {
+    if (this.processing) return;
     this.items = this.items.filter(item => item.productId !== productId);
   }
 
-  totalUnits(): number {
-    return this.items.reduce((total, item) => total + item.quantity, 0);
-  }
+  create(): void {
+    if (this.processing) return;
 
-  save(): void {
-    if (!this.validateItems()) return;
-    this.processing = true;
-    this.billing.createInvoice(this.items).subscribe({
-      next: invoice => this.router.navigate(['/invoices', invoice.id]),
-      error: () => this.stopWithMessage('Não foi possível salvar a nota.')
-    });
-  }
+    if (this.items.length === 0) {
+      this.message = 'Adicione ao menos um produto à nota fiscal.';
+      return;
+    }
 
-  closeAndPrint(): void {
-    if (!this.validateItems()) return;
     this.processing = true;
-    this.insufficientItems = [];
     this.message = '';
 
-    this.billing.createInvoice(this.items).pipe(
-      switchMap(invoice => this.billing.closeInvoice(invoice.id))
+    this.billing.createInvoice(
+      this.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }))
     ).subscribe({
-      next: invoice => this.router.navigate(['/invoices', invoice.id], { queryParams: { print: '1' } }),
-      error: (error: unknown) => {
+      next: invoice => this.router.navigate(['/invoices', invoice.id]),
+      error: (error: Error) => {
         this.processing = false;
-        if (error instanceof InsufficientStockError) {
-          this.insufficientItems = error.items;
-          this.message = 'Estoque insuficiente para concluir a nota.';
-        } else {
-          this.message = 'Não foi possível concluir a operação. Tente novamente.';
-        }
+        this.message = error.message;
         this.cdr.markForCheck();
       }
     });
-  }
-
-  private validateItems(): boolean {
-    if (this.items.length === 0) {
-      this.message = 'Adicione pelo menos um produto à nota.';
-      return false;
-    }
-    this.message = '';
-    return true;
-  }
-
-  private stopWithMessage(message: string): void {
-    this.processing = false;
-    this.message = message;
-    this.cdr.markForCheck();
   }
 }

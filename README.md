@@ -1,61 +1,67 @@
 # Nexa Fiscal
 
-Nexa Fiscal é uma aplicação web para cadastro de produtos, controle de estoque e emissão simplificada de notas fiscais.
+Nexa Fiscal é uma aplicação web para cadastro de produtos, controle de estoque e emissão simplificada de notas fiscais, construída com **Angular** no frontend e **microsserviços em C# / ASP.NET Core** no backend.
 
-Este repositório foi iniciado para o desafio técnico e está organizado desde o primeiro commit para evoluir com **Angular no frontend** e **microsserviços em C# / ASP.NET Core no backend**.
+## Frontend
 
-### Frontend
+A aplicação inclui:
 
-frontend já é navegável e funcional utilizando dados locais em memória. Ela inclui:
+- login e registro com autenticação JWT;
+- dashboard com indicadores;
+- cadastro e consulta de produtos com controle de saldo;
+- criação de notas fiscais com numeração sequencial, múltiplos produtos e quantidades;
+- fechamento de notas com atualização real do estoque;
+- feedback para estoque insuficiente e indisponibilidade do serviço de estoque;
+- impressão da nota após o fechamento.
 
-- Dashboard com indicadores;
-- Cadastro e consulta de produtos;
-- Busca e estados de estoque;
-- Listagem e filtros de notas fiscais;
-- Criação de nota com múltiplos produtos;
-- Fechamento da nota e atualização simulada de estoque;
-- Tratamento visual de estoque insuficiente;
-- Detalhes e impressão da nota;
-- Nexa Insights com análise local demonstrativa;
-- layout responsivo baseado no protótipo visual aprovado.
+## Backend
 
+O backend é dividido em três serviços independentes:
 
-### Backend
+- `auth-service`: usuários, login e emissão de JWT;
+- `inventory-service`: produtos, saldos e baixa de estoque;
+- `billing-service`: notas fiscais, itens, numeração e fechamento.
 
-Os dois microsserviços obrigatórios estão separados desde o início:
+Cada serviço possui persistência própria em MongoDB. O Billing Service se comunica com o Inventory Service durante o fechamento da nota.
 
-- `inventory-service`: produtos e estoque;
-- `billing-service`: notas fiscais e faturamento.
+Mais detalhes em [`backend/README.md`](backend/README.md) e [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-Cada serviço possui seus próprios diretórios de Domain, Application, Infrastructure e Api, além das estruturas de testes. 
+## Executando com Docker
 
-
-## Executando o frontend
-
-Requisitos sugeridos:
-
-- Node.js 20+
-- npm 10+
+Requisito: Docker com Docker Compose.
 
 ```bash
-cd frontend/nexa-fiscal-web
-npm install
-npm start
+docker compose up --build
 ```
 
-Depois acesse `http://localhost:4200`.
+Serviços disponíveis:
 
-## Stack planejada
+| Serviço | Endereço |
+| --- | --- |
+| Frontend | `http://localhost:4200` |
+| Inventory API | `http://localhost:5101` |
+| Billing API | `http://localhost:5102` |
+| Auth API | `http://localhost:5103` |
 
-- Angular + TypeScript + RxJS
-- C# + ASP.NET Core Web API
+Para encerrar:
+
+```bash
+docker compose down
+```
+
+Os bancos utilizam volumes separados. A variável `JWT_SECRET` pode ser configurada através de um arquivo `.env` baseado em `.env.example`.
+
+## Stack
+
+- Angular 20 + TypeScript + RxJS
+- C# + .NET 8 + ASP.NET Core Web API
 - MongoDB
-- OpenAPI / Swagger
+- JWT Bearer Authentication
 - Docker / Docker Compose
-- xUnit
-- Serilog
-- resiliência HTTP entre os microsserviços
 
 ## Documentação
 
-O BRD inicial está disponível em [`docs/BRD.md`](docs/BRD.md).
+- [Business Requirements Document](docs/BRD.md)
+- [Arquitetura da solução](docs/ARCHITECTURE.md)
+- [Backend](backend/README.md)
+- [Detalhamento técnico](docs/TECHNICAL_DETAILS.md)

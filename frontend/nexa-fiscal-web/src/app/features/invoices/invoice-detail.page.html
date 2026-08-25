@@ -1,55 +1,118 @@
-@if (invoice$ | async; as invoice) {
-<section class="page invoice-print-area">
-  <div class="screen-only"><a class="back-link" routerLink="/invoices">← Voltar para notas</a></div>
-  <header class="page-header compact invoice-title-row">
-    <div><span class="eyebrow">Nota fiscal</span><h1>{{ invoice.number }}</h1><p>Criada em {{ invoice.createdAt | date:'dd/MM/yyyy HH:mm' }}</p></div>
-    <span class="badge" [class.badge-open]="invoice.status === 'OPEN'" [class.badge-closed]="invoice.status === 'CLOSED'">{{ invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}</span>
-  </header>
-
-  @if (errorMessage) { <div class="alert alert-error screen-only">! {{ errorMessage }}</div> }
-
-  <div class="detail-grid">
-    <section class="panel">
-      <div class="panel-heading"><div><h2>Itens da nota</h2><p>{{ invoice.items.length }} produto(s) registrado(s)</p></div></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Produto</th><th>Código</th><th>Quantidade</th></tr></thead>
-          <tbody>
-            @for (item of invoice.items; track item.productId) {
-              <tr><td><strong>{{ item.productDescription }}</strong></td><td>{{ item.productCode }}</td><td>{{ item.quantity }}</td></tr>
-            }
-          </tbody>
-        </table>
+@if (loading) {
+  <section class="page">
+    <div class="processing-card">
+      <span class="spinner"></span>
+      <div>
+        <strong>Carregando nota fiscal...</strong>
+        <p>Aguarde enquanto buscamos os dados do faturamento.</p>
       </div>
-    </section>
-
-    <aside class="panel detail-meta">
-      <h2>Informações</h2>
-      <div class="summary-line"><span>Status</span><strong>{{ invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}</strong></div>
-      <div class="summary-line"><span>Criação</span><strong>{{ invoice.createdAt | date:'dd/MM/yyyy' }}</strong></div>
-      <div class="summary-line"><span>Fechamento</span><strong>{{ invoice.closedAt ? (invoice.closedAt | date:'dd/MM/yyyy') : 'Pendente' }}</strong></div>
-      <div class="summary-line"><span>Total de unidades</span><strong>{{ totalUnits(invoice) }}</strong></div>
-
-      <div class="screen-only detail-actions">
-        @if (invoice.status === 'OPEN') {
-          <button class="btn btn-primary btn-block" type="button" [disabled]="processing" (click)="close(invoice)">{{ processing ? 'Processando...' : 'Fechar nota' }}</button>
-        } @else {
-          <button class="btn btn-primary btn-block" type="button" (click)="print()">Imprimir nota</button>
-        }
-      </div>
-    </aside>
-  </div>
-
-  <section class="insights-card screen-only">
-    <div class="insight-icon">✦</div>
-    <div class="insight-content">
-      <span class="eyebrow">Nexa Insights</span>
-      <h2>Análise de impacto no estoque</h2>
-      @if (insight) { <p>{{ insight }}</p> } @else { <p>Gere um resumo rápido sobre o impacto operacional desta nota.</p> }
     </div>
-    <button class="btn btn-secondary" type="button" (click)="generateInsight(invoice)">✦ Analisar impacto</button>
   </section>
+} @else if (loadError) {
+  <section class="page">
+    <div class="alert alert-error">{{ loadError }}</div>
+    <a class="btn btn-outline" routerLink="/invoices">Voltar para notas</a>
+  </section>
+} @else if (vm$ | async; as vm) {
+<section class="page">
+  <a class="back-link screen-only" routerLink="/invoices">← Voltar para notas</a>
+
+  @if (processing) {
+    <div class="processing-card screen-only">
+      <span class="spinner"></span>
+      <div>
+        <strong>Processando nota fiscal...</strong>
+        <p>Estamos validando os produtos e atualizando o estoque.</p>
+      </div>
+    </div>
+  }
+
+  @if (closeError) {
+    <div class="alert alert-error screen-only">
+      <strong>Não foi possível validar o estoque.</strong><br />
+      {{ closeError }}
+    </div>
+  }
+
+  @if (insufficientItems.length > 0) {
+    <section class="panel insufficient-panel screen-only">
+      <h2>Estoque insuficiente para concluir a nota.</h2>
+
+      @for (item of insufficientItems; track item.productId) {
+        <div class="insufficient-row">
+          <div>
+            <strong>{{ item.description }}</strong>
+            <small>{{ item.code }}</small>
+          </div>
+          <div>
+            <span>Solicitado<strong>{{ item.requested }}</strong></span>
+            <span>Disponível<strong>{{ item.available }}</strong></span>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <div [class.disabled-area]="processing">
+    <header class="page-header compact invoice-title-row">
+      <div>
+        <span class="eyebrow">Nota fiscal</span>
+        <h1>{{ vm.invoice.number }}</h1>
+        <p>Criada em {{ vm.invoice.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+      </div>
+      <span
+        class="badge"
+        [class.badge-open]="vm.invoice.status === 'OPEN'"
+        [class.badge-closed]="vm.invoice.status === 'CLOSED'">
+        {{ vm.invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}
+      </span>
+    </header>
+
+    <div class="detail-grid">
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h2>Produtos</h2><p>Itens registrados no faturamento</p></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Código</th><th>Produto</th><th>Quantidade</th></tr></thead>
+            <tbody>
+              @for (item of vm.items; track item.productId) {
+                <tr>
+                  <td><span class="code-pill">{{ item.code }}</span></td>
+                  <td><strong>{{ item.description }}</strong></td>
+                  <td>{{ item.quantity }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="3"><div class="empty-state">Nenhum item registrado nesta nota.</div></td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="panel detail-meta">
+        <h2>Detalhes</h2>
+        <div class="summary-line"><span>Número</span><strong>{{ vm.invoice.number }}</strong></div>
+        <div class="summary-line"><span>Status</span><strong>{{ vm.invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}</strong></div>
+        <div class="summary-line"><span>Itens</span><strong>{{ vm.invoice.items.length }}</strong></div>
+        <div class="summary-line"><span>Criação</span><strong>{{ vm.invoice.createdAt | date:'dd/MM/yyyy HH:mm' }}</strong></div>
+        <div class="summary-line"><span>Fechamento</span><strong>{{ vm.invoice.closedAt ? (vm.invoice.closedAt | date:'dd/MM/yyyy HH:mm') : 'Pendente' }}</strong></div>
+
+        <div class="detail-actions screen-only">
+          @if (vm.invoice.status === 'OPEN') {
+            <button
+              class="btn btn-primary btn-block"
+              type="button"
+              [disabled]="processing"
+              (click)="closeAndPrint(vm.invoice)">
+              {{ processing ? 'Processando...' : 'Fechar e imprimir' }}
+            </button>
+          }
+        </div>
+      </aside>
+    </div>
+  </div>
 </section>
-} @else {
-  <section class="page"><div class="panel empty-state">Nota fiscal não encontrada. <a routerLink="/invoices">Voltar</a></div></section>
 }

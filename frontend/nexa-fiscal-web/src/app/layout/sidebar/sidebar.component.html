@@ -22,11 +22,14 @@
     </a>
   </nav>
 
-  <div class="service-status">
-    <span class="status-dot"></span>
-    <div>
-      <strong>Sistemas operacionais</strong>
-      <small>Ambiente de demonstração</small>
+  @if (auth.user(); as user) {
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">{{ user.name.charAt(0).toUpperCase() }}</div>
+      <div class="sidebar-user-copy">
+        <strong>{{ user.name }}</strong>
+        <small>{{ user.email }}</small>
+      </div>
+      <button type="button" class="sidebar-logout" (click)="logout()" aria-label="Sair">↪</button>
     </div>
-  </div>
+  }
 </aside>

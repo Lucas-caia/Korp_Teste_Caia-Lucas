@@ -3,8 +3,8 @@ import { AsyncPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { combineLatest, map, Observable } from 'rxjs';
 import { BillingService } from '../../core/services/billing.service';
-import { InventoryService } from '../../core/services/inventory.service';
-import { getStockStatus, Product } from '../../core/models/product.model';
+import { ProductService } from '../../core/services/product.service';
+import { CatalogProduct } from '../../core/models/catalog-product.model';
 import { Invoice } from '../../core/models/invoice.model';
 
 interface DashboardVm {
@@ -13,7 +13,7 @@ interface DashboardVm {
   openInvoices: number;
   closedInvoices: number;
   recentInvoices: Invoice[];
-  attentionProducts: Product[];
+  attentionProducts: CatalogProduct[];
 }
 
 @Component({
@@ -27,24 +27,27 @@ export class DashboardPage implements OnInit {
   vm$!: Observable<DashboardVm>;
 
   constructor(
-    private readonly inventory: InventoryService,
+    private readonly products: ProductService,
     private readonly billing: BillingService
   ) {}
 
   ngOnInit(): void {
-    this.vm$ = combineLatest([this.inventory.products$, this.billing.invoices$]).pipe(
+    this.products.load();
+    this.billing.load();
+
+    this.vm$ = combineLatest([this.products.products$, this.billing.invoices$]).pipe(
       map(([products, invoices]) => ({
         productCount: products.length,
-        lowStockCount: products.filter(product => getStockStatus(product) !== 'normal').length,
+        lowStockCount: products.filter(product => product.balance <= 5).length,
         openInvoices: invoices.filter(invoice => invoice.status === 'OPEN').length,
         closedInvoices: invoices.filter(invoice => invoice.status === 'CLOSED').length,
         recentInvoices: invoices.slice(0, 5),
-        attentionProducts: products.filter(product => getStockStatus(product) !== 'normal').slice(0, 4)
+        attentionProducts: products.filter(product => product.balance <= 5).slice(0, 4)
       }))
     );
   }
 
-  stockLabel(product: Product): string {
-    return getStockStatus(product) === 'empty' ? 'Sem estoque' : 'Estoque baixo';
+  stockLabel(product: CatalogProduct): string {
+    return product.balance === 0 ? 'Sem estoque' : 'Estoque baixo';
   }
 }

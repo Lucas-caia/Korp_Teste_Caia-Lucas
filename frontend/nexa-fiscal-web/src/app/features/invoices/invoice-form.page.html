@@ -1,72 +1,72 @@
 <section class="page">
   <a class="back-link" routerLink="/invoices">← Voltar para notas</a>
+
   <header class="page-header compact">
-    <div><span class="eyebrow">Faturamento</span><h1>Nova nota fiscal</h1><p>Adicione os produtos e confira as quantidades antes do fechamento.</p></div>
+    <div>
+      <span class="eyebrow">Faturamento</span>
+      <h1>Nova nota fiscal</h1>
+      <p>Selecione os produtos e informe as quantidades da nota.</p>
+    </div>
     <span class="badge badge-open">Aberta</span>
   </header>
 
-  @if (processing) {
-    <div class="processing-card">
-      <div class="spinner"></div>
-      <div><strong>Processando nota fiscal…</strong><p>Estamos validando os produtos e atualizando o estoque.</p></div>
-    </div>
-  }
+  @if (message) { <div class="alert alert-error">! {{ message }}</div> }
 
-  @if (message) {
-    <div class="alert" [class.alert-error]="insufficientItems.length > 0" [class.alert-warning]="insufficientItems.length === 0">! {{ message }}</div>
-  }
-
-  @if (insufficientItems.length > 0) {
-    <section class="panel insufficient-panel">
-      <h2>Itens que precisam de ajuste</h2>
-      @for (item of insufficientItems; track item.productId) {
-        <div class="insufficient-row">
-          <div><strong>{{ item.description }}</strong><small>{{ item.code }}</small></div>
-          <div><span>Solicitado <strong>{{ item.requested }}</strong></span><span>Disponível <strong>{{ item.available }}</strong></span></div>
-        </div>
-      }
-    </section>
-  }
-
-  <div class="invoice-layout" [class.disabled-area]="processing">
+  <div class="invoice-layout">
     <section class="panel">
-      <div class="panel-heading"><div><h2>Produtos da nota</h2><p>Selecione um produto cadastrado e informe a quantidade.</p></div></div>
+      <div class="panel-heading">
+        <div>
+          <h2>Produtos da nota</h2>
+          <p>A numeração será gerada automaticamente pelo Billing Service.</p>
+        </div>
+      </div>
 
       <div class="add-item-grid">
         <label class="field grow">
           <span>Produto</span>
-          <select [(ngModel)]="selectedProductId">
+          <select [formControl]="productControl">
             <option value="">Selecione um produto</option>
             @for (product of products$ | async; track product.id) {
-              <option [value]="product.id">{{ product.code }} — {{ product.description }} (saldo {{ product.balance }})</option>
+              <option [value]="product.id">{{ product.code }} — {{ product.description }}</option>
             }
           </select>
         </label>
+
         <label class="field quantity-field">
           <span>Quantidade</span>
-          <input [(ngModel)]="quantity" type="number" min="1" step="1" />
+          <input [formControl]="quantityControl" type="number" min="1" step="1" />
         </label>
-        <button class="btn btn-secondary add-item-btn" type="button" (click)="addItem()">+ Adicionar</button>
+
+        <button class="btn btn-secondary add-item-btn" type="button" (click)="addItem()">Adicionar</button>
       </div>
 
-      @if (selectedProduct(); as product) {
-        <div class="selection-hint">Saldo disponível: <strong>{{ product.balance }} unidades</strong></div>
+      @if (selectedProduct(); as selected) {
+        <div class="selection-hint">
+          Saldo atual de <strong>{{ selected.description }}</strong>: {{ selected.balance }} unidade(s).
+          A disponibilidade definitiva será validada no fechamento.
+        </div>
       }
 
-      <div class="table-wrap invoice-items-table">
+      @if (itemMessage) {
+        <div class="alert alert-warning" style="margin: 0 20px 18px;">! {{ itemMessage }}</div>
+      }
+
+      <div class="invoice-items-table table-wrap">
         <table>
-          <thead><tr><th>Produto</th><th>Código</th><th>Quantidade</th><th>Saldo disponível</th><th></th></tr></thead>
+          <thead>
+            <tr><th>Produto</th><th>Código</th><th>Quantidade</th><th>Saldo atual</th><th></th></tr>
+          </thead>
           <tbody>
             @for (item of items; track item.productId) {
-              <tr [class.row-warning]="item.quantity > item.balanceAtAddition">
-                <td><strong>{{ item.productDescription }}</strong></td>
-                <td>{{ item.productCode }}</td>
-                <td><strong>{{ item.quantity }}</strong></td>
-                <td>{{ item.balanceAtAddition }}</td>
+              <tr [class.row-warning]="item.quantity > item.balance">
+                <td><strong>{{ item.description }}</strong></td>
+                <td><span class="code-pill">{{ item.code }}</span></td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.balance }}</td>
                 <td><button class="remove-btn" type="button" (click)="removeItem(item.productId)">Remover</button></td>
               </tr>
             } @empty {
-              <tr><td colspan="5"><div class="empty-state">Nenhum produto adicionado à nota.</div></td></tr>
+              <tr><td colspan="5"><div class="empty-state">Adicione ao menos um produto à nota.</div></td></tr>
             }
           </tbody>
         </table>
@@ -75,13 +75,17 @@
 
     <aside class="panel invoice-summary">
       <span class="eyebrow">Resumo</span>
-      <h2>Nota em preparação</h2>
-      <div class="summary-line"><span>Produtos distintos</span><strong>{{ items.length }}</strong></div>
-      <div class="summary-line"><span>Total de unidades</span><strong>{{ totalUnits() }}</strong></div>
-      <div class="summary-note">O número sequencial será gerado automaticamente ao salvar.</div>
+      <h2>Nova nota</h2>
+      <div class="summary-line"><span>Status inicial</span><strong>Aberta</strong></div>
+      <div class="summary-line"><span>Numeração</span><strong>Automática</strong></div>
+      <div class="summary-line"><span>Produtos</span><strong>{{ items.length }}</strong></div>
+      <div class="summary-note">
+        Os produtos e quantidades serão persistidos no Billing Service. A baixa de estoque ocorrerá apenas no fluxo de fechamento.
+      </div>
       <div class="summary-actions">
-        <button class="btn btn-outline btn-block" type="button" (click)="save()">Salvar nota</button>
-        <button class="btn btn-primary btn-block" type="button" (click)="closeAndPrint()">Fechar e imprimir</button>
+        <button class="btn btn-primary btn-block" type="button" [disabled]="processing || items.length === 0" (click)="create()">
+          {{ processing ? 'Criando nota...' : 'Criar nota fiscal' }}
+        </button>
       </div>
     </aside>
   </div>

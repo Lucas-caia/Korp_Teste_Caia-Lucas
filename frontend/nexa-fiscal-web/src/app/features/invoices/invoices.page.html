@@ -1,6 +1,6 @@
 <section class="page">
   <header class="page-header">
-    <div><span class="eyebrow">Faturamento</span><h1>Notas Fiscais</h1><p>Gerencie notas abertas e consulte documentos já fechados.</p></div>
+    <div><span class="eyebrow">Faturamento</span><h1>Notas Fiscais</h1><p>Gerencie notas abertas e consulte documentos já registrados.</p></div>
     <a class="btn btn-primary" routerLink="/invoices/new">+ Nova nota</a>
   </header>
 
@@ -19,7 +19,14 @@
             <tr>
               <td><strong>{{ invoice.number }}</strong></td>
               <td>{{ invoice.items.length }}</td>
-              <td><span class="badge" [class.badge-open]="invoice.status === 'OPEN'" [class.badge-closed]="invoice.status === 'CLOSED'">{{ invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}</span></td>
+              <td>
+                <span
+                  class="badge"
+                  [class.badge-open]="invoice.status === 'OPEN'"
+                  [class.badge-closed]="invoice.status === 'CLOSED'">
+                  {{ invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}
+                </span>
+              </td>
               <td>{{ invoice.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
               <td>{{ invoice.closedAt ? (invoice.closedAt | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
               <td><a class="table-action" [routerLink]="['/invoices', invoice.id]">Visualizar →</a></td>

@@ -1,11 +1,25 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { AsyncPipe, DatePipe } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { BehaviorSubject, combineLatest, map, Observable, of } from 'rxjs';
-import { Invoice } from '../../core/models/invoice.model';
-import { BillingService } from '../../core/services/billing.service';
-import { InventoryService } from '../../core/services/inventory.service';
-import { InsufficientStockError } from '../../core/services/inventory.service';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
+import { InsufficientStockItem, Invoice } from '../../core/models/invoice.model';
+import {
+  BillingService,
+  InvoiceCloseError
+} from '../../core/services/billing.service';
+import { ProductService } from '../../core/services/product.service';
+
+interface InvoiceDetailItemVm {
+  productId: string;
+  code: string;
+  description: string;
+  quantity: number;
+}
+
+interface InvoiceDetailVm {
+  invoice: Invoice;
+  items: InvoiceDetailItemVm[];
+}
 
 @Component({
   selector: 'app-invoice-detail-page',
@@ -15,71 +29,91 @@ import { InsufficientStockError } from '../../core/services/inventory.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InvoiceDetailPage implements OnInit {
-  private readonly refreshSubject = new BehaviorSubject(0);
-  invoice$!: Observable<Invoice | undefined>;
-  insight = '';
+  private readonly invoiceSubject = new BehaviorSubject<Invoice | undefined>(undefined);
+
+  vm$!: Observable<InvoiceDetailVm | undefined>;
+  loading = true;
   processing = false;
-  errorMessage = '';
+  loadError = '';
+  closeError = '';
+  insufficientItems: InsufficientStockItem[] = [];
 
   constructor(
     private readonly route: ActivatedRoute,
-    private readonly router: Router,
     private readonly billing: BillingService,
-    private readonly inventory: InventoryService,
+    private readonly products: ProductService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    this.invoice$ = combineLatest([this.billing.invoices$, this.refreshSubject]).pipe(
-      map(([invoices]) => invoices.find(invoice => invoice.id === id))
+    this.products.load();
+
+    this.vm$ = combineLatest([
+      this.invoiceSubject,
+      this.products.products$
+    ]).pipe(
+      map(([invoice, products]) => {
+        if (!invoice) return undefined;
+
+        return {
+          invoice,
+          items: invoice.items.map(item => {
+            const product = products.find(current => current.id === item.productId);
+
+            return {
+              productId: item.productId,
+              code: product?.code ?? '—',
+              description: product?.description ?? 'Produto não encontrado no catálogo',
+              quantity: item.quantity
+            };
+          })
+        };
+      })
     );
 
-    if (this.route.snapshot.queryParamMap.get('print') === '1') {
-      setTimeout(() => window.print(), 650);
-    }
-  }
-
-  close(invoice: Invoice): void {
-    this.processing = true;
-    this.errorMessage = '';
-    this.billing.closeInvoice(invoice.id).subscribe({
-      next: () => {
-        this.processing = false;
-        this.refreshSubject.next(this.refreshSubject.value + 1);
+    this.billing.getById(id).subscribe({
+      next: invoice => {
+        this.invoiceSubject.next(invoice);
+        this.loading = false;
         this.cdr.markForCheck();
       },
-      error: (error: unknown) => {
-        this.processing = false;
-        this.errorMessage = error instanceof InsufficientStockError
-          ? 'Estoque insuficiente. Ajuste os itens antes de tentar novamente.'
-          : 'Não foi possível validar o estoque. Sua nota permanece aberta.';
+      error: () => {
+        this.loading = false;
+        this.loadError = 'Nota fiscal não encontrada.';
         this.cdr.markForCheck();
       }
     });
   }
 
+  closeAndPrint(invoice: Invoice): void {
+    if (this.processing || invoice.status !== 'OPEN') return;
 
-  totalUnits(invoice: Invoice): number {
-    return invoice.items.reduce((total, item) => total + item.quantity, 0);
-  }
+    this.processing = true;
+    this.closeError = '';
+    this.insufficientItems = [];
+    this.cdr.markForCheck();
 
-  generateInsight(invoice: Invoice): void {
-    const products = this.inventory.snapshot();
-    const critical = invoice.items
-      .map(item => ({ item, product: products.find(product => product.id === item.productId) }))
-      .filter(pair => pair.product && pair.product.balance <= pair.product.minBalance);
+    this.billing.closeInvoice(invoice.id).subscribe({
+      next: closedInvoice => {
+        this.invoiceSubject.next(closedInvoice);
+        this.products.load(true);
+        this.processing = false;
+        this.cdr.markForCheck();
 
-    if (critical.length === 0) {
-      this.insight = 'O impacto desta nota está dentro de uma faixa confortável de estoque para os produtos analisados.';
-      return;
-    }
+        setTimeout(() => window.print(), 150);
+      },
+      error: (error: InvoiceCloseError) => {
+        this.processing = false;
 
-    const names = critical.slice(0, 2).map(pair => pair.item.productDescription).join(' e ');
-    this.insight = `${critical.length} produto(s) merecem atenção após esta movimentação. Destaque para ${names}, que estão próximos ou abaixo do estoque mínimo definido.`;
-  }
+        if (error.code === 'INSUFFICIENT_STOCK') {
+          this.insufficientItems = error.items;
+        } else {
+          this.closeError = error.message;
+        }
 
-  print(): void {
-    window.print();
+        this.cdr.markForCheck();
+      }
+    });
   }
 }

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NexaFiscal.Auth.Application/NexaFiscal.Auth.Application.csproj" />
+    <ProjectReference Include="../NexaFiscal.Auth.Infrastructure/NexaFiscal.Auth.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,55 +1,69 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { combineLatest, debounceTime, map, Observable, startWith } from 'rxjs';
-import { Product, getStockStatus } from '../../core/models/product.model';
-import { InventoryService } from '../../core/services/inventory.service';
+import { CatalogProduct } from '../../core/models/catalog-product.model';
+import { ProductService } from '../../core/services/product.service';
 
 @Component({
   selector: 'app-products-page',
   standalone: true,
-  imports: [AsyncPipe, ReactiveFormsModule],
+  imports: [AsyncPipe, DatePipe, ReactiveFormsModule],
   templateUrl: './products.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductsPage implements OnInit {
   readonly search = new FormControl('', { nonNullable: true });
   readonly productForm = new FormGroup({
-    code: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    description: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    balance: new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(0)] })
+    code: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(40)]
+    }),
+    description: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(160)]
+    }),
+    balance: new FormControl(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0)]
+    })
   });
 
-  filteredProducts$!: Observable<Product[]>;
+  filteredProducts$!: Observable<CatalogProduct[]>;
   createOpen = false;
   saving = false;
   formError = '';
   successMessage = '';
 
-  constructor(private readonly inventory: InventoryService) {}
+  constructor(private readonly products: ProductService) {}
 
   ngOnInit(): void {
+    this.products.load();
     const search$ = this.search.valueChanges.pipe(startWith(''), debounceTime(120));
-    this.filteredProducts$ = combineLatest([this.inventory.products$, search$]).pipe(
+
+    this.filteredProducts$ = combineLatest([this.products.products$, search$]).pipe(
       map(([products, term]) => {
         const query = term.trim().toLowerCase();
         if (!query) return products;
+
         return products.filter(product =>
-          product.code.toLowerCase().includes(query) || product.description.toLowerCase().includes(query)
+          product.code.toLowerCase().includes(query) ||
+          product.description.toLowerCase().includes(query)
         );
       })
     );
   }
 
-  statusClass(product: Product): string {
-    return `stock-${getStockStatus(product)}`;
+  stockLabel(product: CatalogProduct): string {
+    if (product.balance === 0) return 'Sem estoque';
+    if (product.balance <= 5) return 'Estoque baixo';
+    return 'Normal';
   }
 
-  statusLabel(product: Product): string {
-    const status = getStockStatus(product);
-    if (status === 'empty') return 'Sem estoque';
-    if (status === 'low') return 'Estoque baixo';
-    return 'Normal';
+  stockClass(product: CatalogProduct): string {
+    if (product.balance === 0) return 'stock-empty';
+    if (product.balance <= 5) return 'stock-low';
+    return 'stock-normal';
   }
 
   openCreate(): void {
@@ -70,7 +84,8 @@ export class ProductsPage implements OnInit {
 
     this.saving = true;
     this.formError = '';
-    this.inventory.addProduct(this.productForm.getRawValue()).subscribe({
+
+    this.products.create(this.productForm.getRawValue()).subscribe({
       next: product => {
         this.saving = false;
         this.createOpen = false;
