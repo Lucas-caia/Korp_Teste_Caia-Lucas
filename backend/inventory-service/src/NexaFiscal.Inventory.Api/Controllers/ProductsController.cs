@@ -25,7 +25,12 @@ public sealed class ProductsController(ProductService products) : ControllerBase
     {
         try
         {
-            var product = await products.CreateAsync(request.Code, request.Description, cancellationToken);
+            var product = await products.CreateAsync(
+                request.Code,
+                request.Description,
+                request.Balance,
+                cancellationToken);
+
             var response = ProductResponse.FromDomain(product);
             return Created($"/api/products/{response.Id}", response);
         }

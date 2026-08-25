@@ -12,9 +12,10 @@ public sealed class ProductService(IProductRepository repository)
     public async Task<Product> CreateAsync(
         string code,
         string description,
+        int balance,
         CancellationToken cancellationToken = default)
     {
-        var product = Product.Create(code, description);
+        var product = Product.Create(code, description, balance);
         var existing = await repository.FindByCodeAsync(product.Code, cancellationToken);
 
         if (existing is not null)

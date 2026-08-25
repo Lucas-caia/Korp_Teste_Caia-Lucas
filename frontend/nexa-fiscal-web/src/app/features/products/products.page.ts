@@ -15,8 +15,18 @@ import { ProductService } from '../../core/services/product.service';
 export class ProductsPage implements OnInit {
   readonly search = new FormControl('', { nonNullable: true });
   readonly productForm = new FormGroup({
-    code: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(40)] }),
-    description: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(160)] })
+    code: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(40)]
+    }),
+    description: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(160)]
+    }),
+    balance: new FormControl(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0)]
+    })
   });
 
   filteredProducts$!: Observable<CatalogProduct[]>;
@@ -35,16 +45,30 @@ export class ProductsPage implements OnInit {
       map(([products, term]) => {
         const query = term.trim().toLowerCase();
         if (!query) return products;
+
         return products.filter(product =>
-          product.code.toLowerCase().includes(query) || product.description.toLowerCase().includes(query)
+          product.code.toLowerCase().includes(query) ||
+          product.description.toLowerCase().includes(query)
         );
       })
     );
   }
 
+  stockLabel(product: CatalogProduct): string {
+    if (product.balance === 0) return 'Sem estoque';
+    if (product.balance <= 5) return 'Estoque baixo';
+    return 'Normal';
+  }
+
+  stockClass(product: CatalogProduct): string {
+    if (product.balance === 0) return 'stock-empty';
+    if (product.balance <= 5) return 'stock-low';
+    return 'stock-normal';
+  }
+
   openCreate(): void {
     this.formError = '';
-    this.productForm.reset({ code: '', description: '' });
+    this.productForm.reset({ code: '', description: '', balance: 0 });
     this.createOpen = true;
   }
 

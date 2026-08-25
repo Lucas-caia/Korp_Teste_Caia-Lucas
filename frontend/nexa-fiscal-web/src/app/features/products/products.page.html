@@ -16,16 +16,20 @@
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Código</th><th>Descrição</th><th>Cadastro</th></tr></thead>
+        <thead>
+          <tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Situação</th><th>Cadastro</th></tr>
+        </thead>
         <tbody>
           @for (product of filteredProducts$ | async; track product.id) {
             <tr>
               <td><span class="code-pill">{{ product.code }}</span></td>
               <td><strong>{{ product.description }}</strong></td>
+              <td><strong class="balance">{{ product.balance }}</strong></td>
+              <td><span class="stock-badge" [class]="stockClass(product)">{{ stockLabel(product) }}</span></td>
               <td>{{ product.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
             </tr>
           } @empty {
-            <tr><td colspan="3"><div class="empty-state">Nenhum produto encontrado.</div></td></tr>
+            <tr><td colspan="5"><div class="empty-state">Nenhum produto encontrado.</div></td></tr>
           }
         </tbody>
       </table>
@@ -45,19 +49,34 @@
         <label class="field">
           <span>Código</span>
           <input formControlName="code" placeholder="Ex.: PRD-009" maxlength="40" />
-          @if (productForm.controls.code.touched && productForm.controls.code.invalid) { <small class="field-error">Código é obrigatório.</small> }
+          @if (productForm.controls.code.touched && productForm.controls.code.invalid) {
+            <small class="field-error">Código é obrigatório.</small>
+          }
         </label>
+
         <label class="field">
           <span>Descrição</span>
           <input formControlName="description" placeholder="Nome do produto" maxlength="160" />
-          @if (productForm.controls.description.touched && productForm.controls.description.invalid) { <small class="field-error">Descrição é obrigatória.</small> }
+          @if (productForm.controls.description.touched && productForm.controls.description.invalid) {
+            <small class="field-error">Descrição é obrigatória.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Saldo inicial</span>
+          <input formControlName="balance" type="number" min="0" step="1" placeholder="0" />
+          @if (productForm.controls.balance.touched && productForm.controls.balance.invalid) {
+            <small class="field-error">Informe um saldo igual ou maior que zero.</small>
+          }
         </label>
 
         @if (formError) { <div class="alert alert-error">! {{ formError }}</div> }
 
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" (click)="closeCreate()">Cancelar</button>
-          <button class="btn btn-primary" type="submit" [disabled]="saving">{{ saving ? 'Cadastrando...' : 'Cadastrar produto' }}</button>
+          <button class="btn btn-primary" type="submit" [disabled]="saving">
+            {{ saving ? 'Cadastrando...' : 'Cadastrar produto' }}
+          </button>
         </div>
       </form>
     </section>
