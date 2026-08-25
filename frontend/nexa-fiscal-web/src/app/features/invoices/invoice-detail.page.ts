@@ -116,8 +116,4 @@ export class InvoiceDetailPage implements OnInit {
       }
     });
   }
-
-  print(): void {
-    window.print();
-  }
 }
