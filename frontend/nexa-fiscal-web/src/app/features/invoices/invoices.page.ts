@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { AsyncPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { BehaviorSubject, combineLatest, map } from 'rxjs';
@@ -14,7 +14,7 @@ type InvoiceFilter = 'ALL' | InvoiceStatus;
   templateUrl: './invoices.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class InvoicesPage {
+export class InvoicesPage implements OnInit {
   private readonly filterSubject = new BehaviorSubject<InvoiceFilter>('ALL');
   readonly filter$ = this.filterSubject.asObservable();
   readonly invoices$ = combineLatest([this.billing.invoices$, this.filter$]).pipe(
@@ -22,6 +22,10 @@ export class InvoicesPage {
   );
 
   constructor(private readonly billing: BillingService) {}
+
+  ngOnInit(): void {
+    this.billing.load();
+  }
 
   setFilter(filter: InvoiceFilter): void {
     this.filterSubject.next(filter);

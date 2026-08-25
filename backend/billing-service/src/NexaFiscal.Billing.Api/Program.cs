@@ -1,6 +1,10 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using NexaFiscal.Billing.Application.Abstractions;
+using NexaFiscal.Billing.Application.Services;
+using NexaFiscal.Billing.Infrastructure.Persistence;
+using NexaFiscal.Billing.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +40,12 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
+builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
+builder.Services.AddSingleton<IInvoiceRepository, MongoInvoiceRepository>();
+builder.Services.AddSingleton<IInvoiceNumberSequence, MongoInvoiceNumberSequence>();
+builder.Services.AddScoped<InvoiceService>();
 
 var app = builder.Build();
 
@@ -44,12 +53,12 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapControllers();
 app.MapGet("/", () => Results.Ok(new
 {
     service = "Nexa Fiscal Billing Service",
     status = "running"
 }));
-
 app.MapHealthChecks("/health");
 
 app.Run();

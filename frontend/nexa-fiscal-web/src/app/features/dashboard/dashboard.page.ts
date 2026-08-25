@@ -32,6 +32,8 @@ export class DashboardPage implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.billing.load();
+
     this.vm$ = combineLatest([this.inventory.products$, this.billing.invoices$]).pipe(
       map(([products, invoices]) => ({
         productCount: products.length,
