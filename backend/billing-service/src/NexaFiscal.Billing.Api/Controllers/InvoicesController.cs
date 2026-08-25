@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexaFiscal.Billing.Api.Contracts;
+using NexaFiscal.Billing.Application.Exceptions;
 using NexaFiscal.Billing.Application.Models;
 using NexaFiscal.Billing.Application.Services;
 
@@ -48,6 +49,55 @@ public sealed class InvoicesController(InvoiceService invoices) : ControllerBase
                 Title = "Dados da nota fiscal inválidos",
                 Detail = exception.Message,
                 Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
+    [HttpPost("{id}/close")]
+    public async Task<ActionResult<InvoiceResponse>> Close(
+        string id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var invoice = await invoices.CloseAsync(id, cancellationToken);
+            return Ok(InvoiceResponse.FromDomain(invoice));
+        }
+        catch (InvoiceNotFoundException exception)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Nota fiscal não encontrada",
+                Detail = exception.Message,
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (InvoiceAlreadyClosedException exception)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "Nota fiscal já fechada",
+                Detail = exception.Message,
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+        catch (StockInsufficientException exception)
+        {
+            return Conflict(new
+            {
+                title = "Estoque insuficiente",
+                detail = exception.Message,
+                status = StatusCodes.Status409Conflict,
+                items = exception.Items
+            });
+        }
+        catch (InventoryUnavailableException exception)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
+            {
+                Title = "Serviço de estoque indisponível",
+                Detail = exception.Message,
+                Status = StatusCodes.Status503ServiceUnavailable
             });
         }
     }

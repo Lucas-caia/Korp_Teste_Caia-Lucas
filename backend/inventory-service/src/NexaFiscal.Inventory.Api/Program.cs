@@ -44,7 +44,9 @@ builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
 builder.Services.AddSingleton<IProductRepository, MongoProductRepository>();
+builder.Services.AddSingleton<IStockRepository, MongoStockRepository>();
 builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<StockService>();
 
 var app = builder.Build();
 

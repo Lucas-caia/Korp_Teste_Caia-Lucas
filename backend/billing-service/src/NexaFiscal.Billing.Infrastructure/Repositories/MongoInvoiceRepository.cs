@@ -44,5 +44,18 @@ public sealed class MongoInvoiceRepository : IInvoiceRepository
     }
 
     public Task AddAsync(Invoice invoice, CancellationToken cancellationToken = default) =>
-        _invoices.InsertOneAsync(InvoiceDocument.FromDomain(invoice), cancellationToken: cancellationToken);
+        _invoices.InsertOneAsync(
+            InvoiceDocument.FromDomain(invoice),
+            cancellationToken: cancellationToken);
+
+    public async Task UpdateAsync(Invoice invoice, CancellationToken cancellationToken = default)
+    {
+        var result = await _invoices.ReplaceOneAsync(
+            current => current.Id == invoice.Id,
+            InvoiceDocument.FromDomain(invoice),
+            cancellationToken: cancellationToken);
+
+        if (result.MatchedCount == 0)
+            throw new InvalidOperationException($"Nota fiscal '{invoice.Id}' não encontrada para atualização.");
+    }
 }

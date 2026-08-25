@@ -50,6 +50,15 @@ public sealed class Invoice
             null);
     }
 
+    public void Close()
+    {
+        if (Status != InvoiceStatus.Open)
+            throw new InvalidOperationException("Somente notas abertas podem ser fechadas.");
+
+        Status = InvoiceStatus.Closed;
+        ClosedAt = DateTime.UtcNow;
+    }
+
     public static Invoice Restore(
         string id,
         string number,
