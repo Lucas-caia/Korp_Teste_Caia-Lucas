@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NexaFiscal.Billing.Application/NexaFiscal.Billing.Application.csproj" />
+    <ProjectReference Include="../NexaFiscal.Billing.Domain/NexaFiscal.Billing.Domain.csproj" />
+  </ItemGroup>
+</Project>
