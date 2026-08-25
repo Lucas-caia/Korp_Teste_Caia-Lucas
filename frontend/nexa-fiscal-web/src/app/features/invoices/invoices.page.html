@@ -1,0 +1,34 @@
+<section class="page">
+  <header class="page-header">
+    <div><span class="eyebrow">Faturamento</span><h1>Notas Fiscais</h1><p>Gerencie notas abertas e consulte documentos já fechados.</p></div>
+    <a class="btn btn-primary" routerLink="/invoices/new">+ Nova nota</a>
+  </header>
+
+  <section class="panel">
+    <div class="filter-tabs">
+      <button type="button" [class.active]="(filter$ | async) === 'ALL'" (click)="setFilter('ALL')">Todas</button>
+      <button type="button" [class.active]="(filter$ | async) === 'OPEN'" (click)="setFilter('OPEN')">Abertas</button>
+      <button type="button" [class.active]="(filter$ | async) === 'CLOSED'" (click)="setFilter('CLOSED')">Fechadas</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Número</th><th>Itens</th><th>Status</th><th>Criação</th><th>Fechamento</th><th>Ações</th></tr></thead>
+        <tbody>
+          @for (invoice of invoices$ | async; track invoice.id) {
+            <tr>
+              <td><strong>{{ invoice.number }}</strong></td>
+              <td>{{ invoice.items.length }}</td>
+              <td><span class="badge" [class.badge-open]="invoice.status === 'OPEN'" [class.badge-closed]="invoice.status === 'CLOSED'">{{ invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}</span></td>
+              <td>{{ invoice.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ invoice.closedAt ? (invoice.closedAt | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
+              <td><a class="table-action" [routerLink]="['/invoices', invoice.id]">Visualizar →</a></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6"><div class="empty-state">Nenhuma nota neste filtro.</div></td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

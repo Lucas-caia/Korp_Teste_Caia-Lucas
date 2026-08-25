@@ -1,0 +1,32 @@
+<aside class="sidebar">
+  <a class="brand" routerLink="/" aria-label="Nexa Fiscal - início">
+    <span class="brand-mark">N</span>
+    <span>
+      <strong>Nexa</strong>
+      <small>Fiscal</small>
+    </span>
+  </a>
+
+  <nav class="nav-list" aria-label="Navegação principal">
+    <a routerLink="/" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active">
+      <span class="nav-icon">▦</span>
+      Dashboard
+    </a>
+    <a routerLink="/products" routerLinkActive="active">
+      <span class="nav-icon">□</span>
+      Produtos
+    </a>
+    <a routerLink="/invoices" routerLinkActive="active">
+      <span class="nav-icon">▤</span>
+      Notas Fiscais
+    </a>
+  </nav>
+
+  <div class="service-status">
+    <span class="status-dot"></span>
+    <div>
+      <strong>Sistemas operacionais</strong>
+      <small>Ambiente de demonstração</small>
+    </div>
+  </div>
+</aside>

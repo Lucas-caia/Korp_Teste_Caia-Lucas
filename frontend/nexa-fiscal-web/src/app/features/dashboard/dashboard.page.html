@@ -1,0 +1,71 @@
+@if (vm$ | async; as vm) {
+<section class="page">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Nexa Fiscal</span>
+      <h1>Visão geral</h1>
+      <p>Acompanhe o faturamento e a situação atual do estoque.</p>
+    </div>
+    <a class="btn btn-primary" routerLink="/invoices/new">+ Nova nota</a>
+  </header>
+
+  <div class="metric-grid">
+    <article class="metric-card">
+      <div class="metric-icon green">□</div>
+      <div><span>Produtos cadastrados</span><strong>{{ vm.productCount }}</strong></div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon gold">!</div>
+      <div><span>Atenção ao estoque</span><strong>{{ vm.lowStockCount }}</strong></div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon blue">▤</div>
+      <div><span>Notas abertas</span><strong>{{ vm.openInvoices }}</strong></div>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon green">✓</div>
+      <div><span>Notas fechadas</span><strong>{{ vm.closedInvoices }}</strong></div>
+    </article>
+  </div>
+
+  <div class="content-grid">
+    <section class="panel panel-large">
+      <div class="panel-heading">
+        <div><h2>Notas recentes</h2><p>Últimas movimentações de faturamento</p></div>
+        <a class="text-link" routerLink="/invoices">Ver todas →</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Número</th><th>Itens</th><th>Status</th><th>Data</th><th></th></tr></thead>
+          <tbody>
+            @for (invoice of vm.recentInvoices; track invoice.id) {
+              <tr>
+                <td><strong>{{ invoice.number }}</strong></td>
+                <td>{{ invoice.items.length }}</td>
+                <td><span class="badge" [class.badge-open]="invoice.status === 'OPEN'" [class.badge-closed]="invoice.status === 'CLOSED'">{{ invoice.status === 'OPEN' ? 'Aberta' : 'Fechada' }}</span></td>
+                <td>{{ invoice.createdAt | date:'dd/MM/yyyy' }}</td>
+                <td><a class="icon-link" [routerLink]="['/invoices', invoice.id]">Ver →</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="panel attention-panel">
+      <div class="panel-heading"><div><h2>Atenção ao estoque</h2><p>Itens que precisam de acompanhamento</p></div></div>
+      <div class="attention-list">
+        @for (product of vm.attentionProducts; track product.id) {
+          <div class="attention-item">
+            <div><strong>{{ product.description }}</strong><small>{{ product.code }}</small></div>
+            <div class="stock-number"><strong>{{ product.balance }}</strong><span>{{ stockLabel(product) }}</span></div>
+          </div>
+        } @empty {
+          <div class="empty-inline">Nenhum produto requer atenção.</div>
+        }
+      </div>
+      <a class="btn btn-outline btn-block" routerLink="/products">Gerenciar produtos</a>
+    </aside>
+  </div>
+</section>
+}
