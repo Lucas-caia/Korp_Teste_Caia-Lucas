@@ -1,11 +1,22 @@
 export type InvoiceStatus = 'OPEN' | 'CLOSED';
 
+export interface StoredInvoiceItem {
+  productId: string;
+  quantity: number;
+}
+
 export interface Invoice {
   id: string;
   number: string;
   status: InvoiceStatus;
+  items: StoredInvoiceItem[];
   createdAt: string;
-  closedAt?: string;
+  closedAt: string | null;
+}
+
+export interface CreateInvoiceItemInput {
+  productId: string;
+  quantity: number;
 }
 
 export interface InvoiceItem {

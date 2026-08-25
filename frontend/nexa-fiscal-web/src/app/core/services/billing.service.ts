@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Invoice } from '../models/invoice.model';
+import { CreateInvoiceItemInput, Invoice } from '../models/invoice.model';
 
 @Injectable({ providedIn: 'root' })
 export class BillingService {
@@ -31,13 +31,14 @@ export class BillingService {
     return this.http.get<Invoice>(`${environment.billingApiUrl}/invoices/${id}`);
   }
 
-  createInvoice(): Observable<Invoice> {
-    return this.http.post<Invoice>(`${environment.billingApiUrl}/invoices`, {}).pipe(
+  createInvoice(items: CreateInvoiceItemInput[]): Observable<Invoice> {
+    return this.http.post<Invoice>(`${environment.billingApiUrl}/invoices`, { items }).pipe(
       tap(invoice => this.invoicesSubject.next([invoice, ...this.invoicesSubject.value])),
       catchError((error: HttpErrorResponse) => {
         const message = error.status === 0 || error.status >= 500
           ? 'O serviço de faturamento está temporariamente indisponível.'
-          : 'Não foi possível criar a nota fiscal.';
+          : error.error?.detail ?? 'Não foi possível criar a nota fiscal.';
+
         return throwError(() => new Error(message));
       })
     );

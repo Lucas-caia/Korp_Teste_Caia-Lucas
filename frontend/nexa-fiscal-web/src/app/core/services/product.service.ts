@@ -12,6 +12,10 @@ export class ProductService {
 
   constructor(private readonly http: HttpClient) {}
 
+  snapshot(): CatalogProduct[] {
+    return this.productsSubject.value.map(product => ({ ...product }));
+  }
+
   load(force = false): void {
     if (this.loaded && !force) return;
 

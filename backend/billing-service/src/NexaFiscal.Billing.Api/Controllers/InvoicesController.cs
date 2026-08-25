@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexaFiscal.Billing.Api.Contracts;
+using NexaFiscal.Billing.Application.Models;
 using NexaFiscal.Billing.Application.Services;
 
 namespace NexaFiscal.Billing.Api.Controllers;
@@ -25,10 +26,29 @@ public sealed class InvoicesController(InvoiceService invoices) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<InvoiceResponse>> Create(CancellationToken cancellationToken)
+    public async Task<ActionResult<InvoiceResponse>> Create(
+        [FromBody] CreateInvoiceRequest request,
+        CancellationToken cancellationToken)
     {
-        var invoice = await invoices.CreateAsync(cancellationToken);
-        var response = InvoiceResponse.FromDomain(invoice);
-        return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
+        try
+        {
+            var items = request.Items
+                .Select(item => new CreateInvoiceItem(item.ProductId, item.Quantity))
+                .ToArray();
+
+            var invoice = await invoices.CreateAsync(items, cancellationToken);
+            var response = InvoiceResponse.FromDomain(invoice);
+
+            return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Dados da nota fiscal inválidos",
+                Detail = exception.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
     }
 }
