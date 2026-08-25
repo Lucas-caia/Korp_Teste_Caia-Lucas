@@ -7,8 +7,32 @@ services:
     ports:
       - "4200:80"
     depends_on:
+      - auth-api
       - inventory-api
       - billing-api
+    networks:
+      - nexa-network
+
+  auth-api:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: nexa-auth-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      FRONTEND_ORIGIN: http://localhost:4200
+      Mongo__ConnectionString: mongodb://auth-db:27017
+      Mongo__DatabaseName: NexaFiscalAuth
+      Jwt__Issuer: NexaFiscal.Auth
+      Jwt__Audience: NexaFiscal
+      Jwt__Key: ${JWT_SECRET:-nexa-fiscal-local-development-key-change-before-production-2026}
+      Jwt__ExpirationMinutes: 60
+    ports:
+      - "5103:8080"
+    depends_on:
+      auth-db:
+        condition: service_healthy
     networks:
       - nexa-network
 
@@ -23,6 +47,9 @@ services:
       FRONTEND_ORIGIN: http://localhost:4200
       Mongo__ConnectionString: mongodb://inventory-db:27017
       Mongo__DatabaseName: NexaFiscalInventory
+      Jwt__Issuer: NexaFiscal.Auth
+      Jwt__Audience: NexaFiscal
+      Jwt__Key: ${JWT_SECRET:-nexa-fiscal-local-development-key-change-before-production-2026}
     ports:
       - "5101:8080"
     depends_on:
@@ -43,6 +70,9 @@ services:
       Mongo__ConnectionString: mongodb://billing-db:27017
       Mongo__DatabaseName: NexaFiscalBilling
       Inventory__BaseUrl: http://inventory-api:8080
+      Jwt__Issuer: NexaFiscal.Auth
+      Jwt__Audience: NexaFiscal
+      Jwt__Key: ${JWT_SECRET:-nexa-fiscal-local-development-key-change-before-production-2026}
     ports:
       - "5102:8080"
     depends_on:
@@ -50,6 +80,23 @@ services:
         condition: service_started
       billing-db:
         condition: service_healthy
+    networks:
+      - nexa-network
+
+  auth-db:
+    image: mongo:8.0
+    container_name: nexa-auth-db
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - auth-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - nexa-network
 
@@ -88,6 +135,7 @@ services:
       - nexa-network
 
 volumes:
+  auth-data:
   inventory-data:
   billing-data:
 

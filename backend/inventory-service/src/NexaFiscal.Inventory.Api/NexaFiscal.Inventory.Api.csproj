@@ -7,5 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="../NexaFiscal.Inventory.Application/NexaFiscal.Inventory.Application.csproj" />
     <ProjectReference Include="../NexaFiscal.Inventory.Infrastructure/NexaFiscal.Inventory.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.30" />
   </ItemGroup>
 </Project>

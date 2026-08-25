@@ -1,0 +1,7 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace NexaFiscal.Auth.Api.Contracts;
+
+public sealed record LoginRequest(
+    [Required, EmailAddress] string Email,
+    [Required] string Password);
