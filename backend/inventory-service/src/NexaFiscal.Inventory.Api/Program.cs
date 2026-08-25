@@ -1,6 +1,10 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using NexaFiscal.Inventory.Application.Abstractions;
+using NexaFiscal.Inventory.Application.Services;
+using NexaFiscal.Inventory.Infrastructure.Persistence;
+using NexaFiscal.Inventory.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +40,11 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
+builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
+builder.Services.AddSingleton<IProductRepository, MongoProductRepository>();
+builder.Services.AddScoped<ProductService>();
 
 var app = builder.Build();
 
@@ -44,12 +52,12 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapControllers();
 app.MapGet("/", () => Results.Ok(new
 {
     service = "Nexa Fiscal Inventory Service",
     status = "running"
 }));
-
 app.MapHealthChecks("/health");
 
 app.Run();

@@ -7,5 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="../NexaFiscal.Inventory.Application/NexaFiscal.Inventory.Application.csproj" />
     <ProjectReference Include="../NexaFiscal.Inventory.Domain/NexaFiscal.Inventory.Domain.csproj" />
+    <PackageReference Include="MongoDB.Driver" Version="3.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
   </ItemGroup>
 </Project>
