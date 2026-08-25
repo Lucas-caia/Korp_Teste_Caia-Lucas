@@ -2,9 +2,19 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NexaFiscal.Inventory.Api.Contracts;
 
-public sealed record ConsumeStockRequest(
-    [property: Required, MinLength(1)] IReadOnlyCollection<ConsumeStockItemRequest> Items);
+public sealed class ConsumeStockRequest
+{
+    [Required]
+    [MinLength(1)]
+    public IReadOnlyCollection<ConsumeStockItemRequest> Items { get; init; } =
+        Array.Empty<ConsumeStockItemRequest>();
+}
 
-public sealed record ConsumeStockItemRequest(
-    [property: Required] string ProductId,
-    [property: Range(1, int.MaxValue)] int Quantity);
+public sealed class ConsumeStockItemRequest
+{
+    [Required]
+    public string ProductId { get; init; } = string.Empty;
+
+    [Range(1, int.MaxValue)]
+    public int Quantity { get; init; }
+}

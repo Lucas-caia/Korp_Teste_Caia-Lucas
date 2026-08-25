@@ -40,9 +40,16 @@ export class ProductService {
         );
       }),
       catchError((error: HttpErrorResponse) => {
-        const message = error.status === 409
-          ? 'Já existe um produto com este código.'
-          : 'Não foi possível cadastrar o produto.';
+        let message = 'Não foi possível cadastrar o produto.';
+
+        if (error.status === 409) {
+          message = 'Já existe um produto com este código.';
+        } else if (error.status === 503 || error.status === 0) {
+          message = 'O serviço de estoque está temporariamente indisponível. Tente novamente em instantes.';
+        } else if (error.status === 400) {
+          message = error.error?.detail ?? 'Verifique os dados informados.';
+        }
+
         return throwError(() => new Error(message));
       })
     );

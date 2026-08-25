@@ -2,9 +2,19 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NexaFiscal.Billing.Api.Contracts;
 
-public sealed record CreateInvoiceRequest(
-    [property: Required, MinLength(1)] IReadOnlyCollection<CreateInvoiceItemRequest> Items);
+public sealed class CreateInvoiceRequest
+{
+    [Required]
+    [MinLength(1)]
+    public IReadOnlyCollection<CreateInvoiceItemRequest> Items { get; init; } =
+        Array.Empty<CreateInvoiceItemRequest>();
+}
 
-public sealed record CreateInvoiceItemRequest(
-    [property: Required] string ProductId,
-    [property: Range(1, int.MaxValue)] int Quantity);
+public sealed class CreateInvoiceItemRequest
+{
+    [Required]
+    public string ProductId { get; init; } = string.Empty;
+
+    [Range(1, int.MaxValue)]
+    public int Quantity { get; init; }
+}

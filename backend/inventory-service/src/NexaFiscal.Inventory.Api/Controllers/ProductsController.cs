@@ -9,13 +9,30 @@ namespace NexaFiscal.Inventory.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/products")]
-public sealed class ProductsController(ProductService products) : ControllerBase
+public sealed class ProductsController(
+    ProductService products,
+    ILogger<ProductsController> logger) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyCollection<ProductResponse>>> List(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyCollection<ProductResponse>>> List(
+        CancellationToken cancellationToken)
     {
-        var result = await products.ListAsync(cancellationToken);
-        return Ok(result.Select(ProductResponse.FromDomain));
+        try
+        {
+            var result = await products.ListAsync(cancellationToken);
+            return Ok(result.Select(ProductResponse.FromDomain));
+        }
+        catch (InventoryPersistenceException exception)
+        {
+            logger.LogError(exception, "Falha ao consultar produtos no Inventory Service.");
+
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
+            {
+                Title = "Serviço de estoque indisponível",
+                Detail = "Não foi possível consultar os produtos no momento.",
+                Status = StatusCodes.Status503ServiceUnavailable
+            });
+        }
     }
 
     [HttpPost]
@@ -41,6 +58,20 @@ public sealed class ProductsController(ProductService products) : ControllerBase
                 Title = "Código de produto já utilizado",
                 Detail = exception.Message,
                 Status = StatusCodes.Status409Conflict
+            });
+        }
+        catch (InventoryPersistenceException exception)
+        {
+            logger.LogError(
+                exception,
+                "Falha ao cadastrar produto {ProductCode} no Inventory Service.",
+                request.Code);
+
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
+            {
+                Title = "Serviço de estoque indisponível",
+                Detail = "Não foi possível salvar o produto no momento. Tente novamente em instantes.",
+                Status = StatusCodes.Status503ServiceUnavailable
             });
         }
     }
